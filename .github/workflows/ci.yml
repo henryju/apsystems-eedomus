@@ -1,0 +1,21 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build plugin zip
+        run: bash build.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aps_eedomus_plugin
+          path: dist/aps_eedomus_plugin.zip

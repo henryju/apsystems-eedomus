@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  bump-and-attach:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.target_commitish }}
+          fetch-depth: 0
+
+      - name: Update manifest version
+        env:
+          VERSION: ${{ github.event.release.tag_name }}
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          jq --arg v "$VERSION" --arg d "$DATE" \
+            '.version = $v | .modification_date = $d' \
+            eedomus_plugin.json > eedomus_plugin.json.tmp
+          mv eedomus_plugin.json.tmp eedomus_plugin.json
+
+      - name: Commit and push version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add eedomus_plugin.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: bump plugin version to ${{ github.event.release.tag_name }}"
+            git push origin HEAD:${{ github.event.release.target_commitish }}
+          else
+            echo "No manifest changes, skipping commit."
+          fi
+
+      - name: Move release tag to bump commit
+        run: |
+          git tag -f "${{ github.event.release.tag_name }}"
+          git push origin "${{ github.event.release.tag_name }}" --force
+
+      - name: Build plugin zip
+        run: bash build.sh
+
+      - name: Attach zip to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: dist/aps_eedomus_plugin.zip
