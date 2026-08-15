@@ -63,12 +63,13 @@ try {
 
     $zip.CreateEntry("img/") | Out-Null
 
-    Get-ChildItem (Join-Path $PSScriptRoot "img") -File | ForEach-Object {
-        $entryName = "img/$($_.Name)"
-        [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
-            $zip, $_.FullName, $entryName,
-            [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
-    }
+    # Only the icon goes in the zip's img/ - the eedomus Store validates
+    # every file under img/ as an icon candidate (must be 128x128), so the
+    # doc screenshots (referenced via GitHub raw URLs in the readmes, not
+    # bundled) must NOT be included here.
+    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+        $zip, (Join-Path $PSScriptRoot "img/apsolar.png"), "img/apsolar.png",
+        [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
 }
 finally {
     $zip.Dispose()

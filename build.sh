@@ -36,7 +36,14 @@ zip -j "dist/$ZIP_NAME" \
   dist/readme_en.md \
   dist/readme_fr.md
 
-zip -r "dist/$ZIP_NAME" img
+# Only the icon goes in the zip's img/ - the eedomus Store validates every
+# file under img/ as an icon candidate (must be 128x128), so the doc
+# screenshots (referenced via GitHub raw URLs in the readmes, not bundled)
+# must NOT be included here.
+mkdir -p dist/img
+cp img/apsolar.png dist/img/apsolar.png
+(cd dist && zip -r "$ZIP_NAME" img)
+rm -rf dist/img
 
 rm dist/readme_en.md dist/readme_fr.md
 
