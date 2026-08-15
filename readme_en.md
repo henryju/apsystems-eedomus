@@ -59,6 +59,8 @@ The eedomus "Fréquence de la requête" field caps out at **1000 minutes** (abou
 
 - **Main device shows a negative number**: that's the opposite of an APsystems error code (e.g. -4000, -3001...). Check your App Id/Secret, or your box's clock (signature depends on the timestamp).
 - **Codes -7001/-7002/-2005**: API quota exceeded or too many requests, increase the polling interval.
+- **Track your API usage**: in the EMA web interface, the same page where you retrieved your App Id/App Secret has a **Historical Call Statistics** section ("Only show the number of visits per month in the last six months.") showing the number of calls per month for the last six months.
 - **No instantaneous power value (stays at -1)**: check the `SID` field actually contains `SID|ECU_ID` (no spaces), and that there's data for today (none at night).
 - **Values stop updating at night**: expected - the plugin skips API calls while "Soleil Exterieur" reads 0 and just keeps showing the last known values. It resumes automatically at sunrise.
-- **"Unit mismatch" in the logs / device stuck loading**: if you created the device before a plugin update, delete it entirely and recreate it from the Store to start from a clean configuration (eedomus doesn't retroactively update an already-created device when the JSON changes). This is required after any plugin update that changes its devices or parameters.
+- **"Unit mismatch" in the logs / device stuck loading**: if you created the device before a plugin update, delete it entirely and recreate it from the Store to start from a clean configuration (eedomus doesn't retroactively update an already-created device when the JSON changes).
+- **Check the eedomus logs**: on your box's local interface, go to **Parametres -> Logs -> http_sensor.log** (or directly `http://eedomus.local/log/?log=http_sensor.log`) to see the detail of the plugin's requests (URL called, return code, value read).
