@@ -142,7 +142,6 @@
     }
   ],
   "scripts": [
-    { "name": "aps_solar.php" },
-    { "name": "aps_discover.php" }
+    { "name": "aps_solar.php" }
   ]
 }

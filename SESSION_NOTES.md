@@ -9,7 +9,7 @@ Plugin eedomus (box domotique française, https://doc.eedomus.com) qui récupèr
 Fichiers du projet :
 - `eedomus_plugin.json` — manifeste du plugin (périphériques, paramètres)
 - `aps_solar.php` — script principal, appelé en continu par le capteur HTTP "today"
-- `aps_discover.php` — script utilitaire, exécution manuelle unique, pour retrouver ECU_ID et UID des onduleurs
+- `aps_discover.php` — script utilitaire historique pour retrouver ECU_ID et UID des onduleurs ; conservé dans le repo pour référence mais retiré du zip distribué et du manifeste (superseded par la popup "Panel information" de l'interface web EMA, voir doc utilisateur)
 - `img/apsolar.png` — icône du plugin
 - `readme_fr.md` / `readme_en.md` — documentation utilisateur
 

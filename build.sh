@@ -33,7 +33,6 @@ iconv -f UTF-8 -t ISO-8859-1 readme_fr.md > dist/readme_fr.md
 zip -j "dist/$ZIP_NAME" \
   eedomus_plugin.json \
   aps_solar.php \
-  aps_discover.php \
   dist/readme_en.md \
   dist/readme_fr.md
 

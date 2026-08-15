@@ -26,8 +26,7 @@ New-Item -ItemType Directory -Path $distDir | Out-Null
 
 $plainFiles = @(
     "eedomus_plugin.json",
-    "aps_solar.php",
-    "aps_discover.php"
+    "aps_solar.php"
 )
 $readmeFiles = @("readme_en.md", "readme_fr.md")
 
