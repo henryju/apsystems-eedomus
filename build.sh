@@ -12,17 +12,33 @@ if ! command -v zip >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v iconv >/dev/null 2>&1; then
+  echo "error: 'iconv' command not found. Needed to convert the readmes to" >&2
+  echo "ISO-8859-1 for eedomus's doc viewer (see SESSION_NOTES.md Piege n10)." >&2
+  exit 1
+fi
+
 ZIP_NAME="aps_eedomus_plugin.zip"
 
 rm -rf dist
 mkdir -p dist
 
-zip -r "dist/$ZIP_NAME" \
+# readme_en.md/readme_fr.md are kept in UTF-8 in the repo for easy editing,
+# but eedomus's doc.php help viewer expects ISO-8859-1, like the .php
+# scripts (see SESSION_NOTES.md Piege n5/n10) - convert only at build time,
+# into the zip, never touching the UTF-8 sources.
+iconv -f UTF-8 -t ISO-8859-1 readme_en.md > dist/readme_en.md
+iconv -f UTF-8 -t ISO-8859-1 readme_fr.md > dist/readme_fr.md
+
+zip -j "dist/$ZIP_NAME" \
   eedomus_plugin.json \
   aps_solar.php \
   aps_discover.php \
-  readme_en.md \
-  readme_fr.md \
-  img
+  dist/readme_en.md \
+  dist/readme_fr.md
+
+zip -r "dist/$ZIP_NAME" img
+
+rm dist/readme_en.md dist/readme_fr.md
 
 echo "Built dist/$ZIP_NAME"

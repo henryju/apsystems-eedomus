@@ -7,7 +7,7 @@
   "creation_date": "2026-07-04",
   "modification_date": "2026-07-04",
   "author": "Custom",
-  "description_fr": "Recupere la production de vos panneaux solaires APsystems (EMA OpenAPI) : aujourd'hui, mois, annee, vie, et puissance instantanee.",
+  "description_fr": "Récupère la production de vos panneaux solaires APsystems (EMA OpenAPI) : aujourd'hui, mois, année, vie, et puissance instantanée.",
   "description_en": "Retrieves your APsystems solar production (EMA OpenAPI): today, month, year, lifetime, and instantaneous power.",
   "parameters": [
     {
@@ -26,23 +26,23 @@
     },
     {
       "parameter": "SID",
-      "description": "Identifiant systeme EMA (SID)",
+      "description": "Identifiant système EMA (SID). Pour activer aussi la puissance instantanée, saisissez SID|ECU_ID (sans espaces, ECU_ID facultatif)",
       "xtype": "textfield",
       "default_value": "",
       "field": "allowBlank:false, width:300"
     },
     {
-      "parameter": "ECU_ID",
-      "description": "Identifiant ECU (facultatif). A renseigner ici pour reference, PUIS a activer une fois via un appel manuel au script (voir readme) pour la puissance instantanee",
-      "xtype": "textfield",
-      "default_value": "",
-      "field": "allowBlank:true, width:300"
+      "parameter": "POLLING",
+      "description": "Intervalle d'interrogation du résumé (aujourd'hui/mois/année/vie), en minutes, max 1000",
+      "xtype": "numberfield",
+      "default_value": "180",
+      "field": "minValue:5, maxValue:1000, allowDecimals:false, width:80, allowBlank:false"
     },
     {
-      "parameter": "POLLING",
-      "description": "Intervalle d'interrogation (en minutes, max 1000)",
+      "parameter": "POLLING_POWER",
+      "description": "Intervalle d'interrogation de la puissance instantanée (en minutes, max 1000)",
       "xtype": "numberfield",
-      "default_value": "60",
+      "default_value": "30",
       "field": "minValue:5, maxValue:1000, allowDecimals:false, width:80, allowBlank:false"
     }
   ],
@@ -60,7 +60,7 @@
         "VAR3": "plugin.parameters.SID",
         "value_type": "float",
         "ignore_errors": 3,
-        "RAW_URL": "http://localhost/script/?exec=aps_solar.php&p1=[VAR1]&p2=[VAR2]&p3=[VAR3]",
+        "RAW_URL": "http://localhost/script/?exec=aps_solar.php&p1=[VAR1]&p2=[VAR2]&p3=[VAR3]&p4=summary",
         "RAW_XPATH": "//today",
         "POLLING": "plugin.parameters.POLLING"
       }
@@ -79,7 +79,7 @@
         "VAR3": "plugin.parameters.SID",
         "value_type": "float",
         "ignore_errors": 3,
-        "RAW_URL": "http://localhost/script/?exec=aps_solar.php&p1=[VAR1]&p2=[VAR2]&p3=[VAR3]",
+        "RAW_URL": "http://localhost/script/?exec=aps_solar.php&p1=[VAR1]&p2=[VAR2]&p3=[VAR3]&p4=summary",
         "RAW_XPATH": "//month",
         "POLLING": "plugin.parameters.POLLING"
       }
@@ -89,7 +89,7 @@
       "parent_id": "today",
       "module_id": 51,
       "utilisation_id": 26,
-      "name": "plugin.name - Production cette annee",
+      "name": "plugin.name - Production cette année",
       "value_type": "float",
       "value_unit": "kWh",
       "parameters": {
@@ -98,7 +98,7 @@
         "VAR3": "plugin.parameters.SID",
         "value_type": "float",
         "ignore_errors": 3,
-        "RAW_URL": "http://localhost/script/?exec=aps_solar.php&p1=[VAR1]&p2=[VAR2]&p3=[VAR3]",
+        "RAW_URL": "http://localhost/script/?exec=aps_solar.php&p1=[VAR1]&p2=[VAR2]&p3=[VAR3]&p4=summary",
         "RAW_XPATH": "//year",
         "POLLING": "plugin.parameters.POLLING"
       }
@@ -117,17 +117,16 @@
         "VAR3": "plugin.parameters.SID",
         "value_type": "float",
         "ignore_errors": 3,
-        "RAW_URL": "http://localhost/script/?exec=aps_solar.php&p1=[VAR1]&p2=[VAR2]&p3=[VAR3]",
+        "RAW_URL": "http://localhost/script/?exec=aps_solar.php&p1=[VAR1]&p2=[VAR2]&p3=[VAR3]&p4=summary",
         "RAW_XPATH": "//lifetime",
         "POLLING": "plugin.parameters.POLLING"
       }
     },
     {
       "device_id": "power",
-      "parent_id": "today",
       "module_id": 51,
       "utilisation_id": 35,
-      "name": "plugin.name - Puissance instantanee",
+      "name": "plugin.name - Puissance instantanée",
       "value_type": "float",
       "value_unit": "W",
       "parameters": {
@@ -136,9 +135,9 @@
         "VAR3": "plugin.parameters.SID",
         "value_type": "float",
         "ignore_errors": 3,
-        "RAW_URL": "http://localhost/script/?exec=aps_solar.php&p1=[VAR1]&p2=[VAR2]&p3=[VAR3]",
+        "RAW_URL": "http://localhost/script/?exec=aps_solar.php&p1=[VAR1]&p2=[VAR2]&p3=[VAR3]&p4=power",
         "RAW_XPATH": "//power",
-        "POLLING": "plugin.parameters.POLLING"
+        "POLLING": "plugin.parameters.POLLING_POWER"
       }
     }
   ],

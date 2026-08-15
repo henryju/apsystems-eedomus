@@ -66,6 +66,16 @@ Fonctions SDK spécifiques utilisées : `getArg($nom, $mandatory=true, $default=
 
 **Encodage** : les fichiers .php doivent être en **ISO-8859-1 / ANSI** (pas UTF-8), sinon les accents affichés peuvent être corrompus. Par simplicité, on a évité tout accent dans le code (commentaires et chaînes de caractères en français sans accents).
 
+## Piège n°10 — Rendu markdown de doc.php (aide du plugin dans eedomus)
+
+L'aide du plugin (bouton "?" dans eedomus) affiche `readme_fr.md`/`readme_en.md` via `https://secure.eedomus.com/pages/doc.php?type=PLUGIN_ID&file=readme_xx.md`, convertis en HTML par un moteur markdown maison assez limité. Constaté en inspectant le HTML généré (voir historique de session) :
+
+- **Pas de support des tableaux GFM** (`| a | b |`) : les lignes sont juste recopiées telles quelles dans un `<p>`, sans jamais devenir un `<table>`. **Remplacer tout tableau par une liste à puces** (`- **`NOM`** : description`), seule forme testée et fiable dans ce renderer.
+- **Les underscores sont traités comme de l'emphase même au milieu d'un mot** (pas de "smart underscore" comme sur GitHub) : `APP_ID` en texte brut devient `APP<em>ID</em SECRET...` (cassé) dans le HTML. **Toujours entourer les identifiants contenant un underscore de backticks** (`` `APP_ID` ``) : à l'intérieur d'un span de code, le contenu n'est pas réinterprété par le parseur markdown, donc l'underscore reste littéral.
+- **Le fichier doit être servi en ISO-8859-1**, comme les scripts .php (piège n°5) — pas seulement une bonne pratique ici, un vrai bug constaté : un caractère UTF-8 multi-octets (ex. `≈`, ou un accent français) ressort en mojibake (`â‰ˆ`, `Ã©` pour `é`, `Ã ` pour `à`) dans le HTML généré, preuve qu'eedomus interprète le fichier comme du Latin-1 côté serveur.
+
+**Solution retenue** : `readme_fr.md`/`readme_en.md` restent en **UTF-8 dans les sources** (édition normale, accents complets, plus lisible/diffable en git). La conversion en ISO-8859-1 se fait **uniquement au moment du build**, dans `build.sh` (via `iconv -f UTF-8 -t ISO-8859-1`) et `build.ps1` (via `[System.Text.Encoding]::GetEncoding("ISO-8859-1", ExceptionFallback, ExceptionFallback)`, qui fait échouer le build avec une erreur claire si un caractère hors Latin-1 traîne dans un readme — ex. `≈`, tirets/guillemets typographiques, `œ` — plutôt que de le laisser passer et corrompre silencieusement l'aide en ligne). Le fichier zippé est donc converti, mais le fichier source du repo ne change jamais d'encodage.
+
 ## Piège n°6 — Limite des 3 VAR dans les capteurs HTTP (le plus gros piège)
 
 Un capteur HTTP eedomus (module_id 51) ne substitue **que `[VAR1]`, `[VAR2]`, `[VAR3]`** dans ses champs `RAW_URL` et `RAW_XPATH` — jamais VAR4+.
@@ -127,14 +137,41 @@ Endpoints utilisés :
 
 `base_url` par défaut : `https://api.apsystemsema.com:9282`
 
-Quota API : **1000 appels/mois**. Le polling eedomus tourne 24h/24 (pas de créneau jour/nuit natif) → calculer sur une base 24h, pas sur les heures d'ensoleillement.
+Quota API : **1000 appels/mois**. Le polling eedomus tournait historiquement 24h/24 (pas de créneau jour/nuit natif côté eedomus) → voir Piège n°9 pour la coupure de nuit ajoutée depuis, qui change ce calcul.
+
+## Piège n°9 — Coupure de nuit et split resume/puissance (POLLING vs POLLING_POWER)
+
+Constat : aucune API/scheduling eedomus natif pour "ne pas interroger la nuit". En revanche la box eedomus expose un périphérique système **"Soleil Extérieur"** (confirmé présent sur une box réelle), valeurs numériques `0=Couché, 20=Se Couche, 80=Se lève, 100=Levé`. Récupérable gratuitement depuis un script via `getPeriphList()` (cherche `name` contenant "soleil") puis `getValue($periph_id)` (champ `['value']`). On skippe les appels APsystems quand la valeur vaut 0 (nuit franche) ; les 3 autres valeurs comptent comme "jour" (on ne coupe pas les transitions lever/coucher). **Fail-open** : périphérique introuvable ou illisible → on ne coupe jamais, comportement identique à avant.
+
+Second constat : les 5 canaux partageaient un seul intervalle `POLLING` (device "today"), empêchant de rafraîchir la puissance instantanée plus souvent que le résumé (ou l'inverse) sans gaspiller le quota. Fix : `power` n'est plus un canal (`parent_id: "today"`) mais un **périphérique maître indépendant**, avec son propre paramètre `POLLING_POWER`. Les deux maîtres (`today` et `power`) appellent le même script avec un `p4` littéral (`summary` ou `power`, pas une VAR — ça ne consomme donc pas un des 3 slots VAR) pour ne déclencher que l'appel API pertinent à ce cycle. Les valeurs non rafraîchies à ce cycle sont resservies depuis un cache (`saveVariable`/`loadVariable`).
+
+**Piège en cascade** : comme `power` a maintenant son propre `periph_id`, `eedomus_controller_module_id` (piège n°7) n'est plus commun entre `today` et `power` — donc **il ne peut plus servir à indexer le cache** (valeurs, à l'époque aussi l'ECU_ID) partagé entre les deux, sous peine que `power` ne retrouve jamais ce qui a été enregistré via un appel référençant `today`. Toutes les clés `saveVariable` (valeurs cache, périph "Soleil") ont donc été ré-indexées sur **`$sid`** (VAR3, identique sur les deux maîtres pour une même instance du plugin) plutôt que sur `eedomus_controller_module_id`. Ce dernier n'est donc plus utilisé du tout dans `aps_solar.php`.
+
+*(Mise à jour : le mécanisme d'activation manuelle de l'ECU_ID décrit ci-dessus — appel URL avec `&ecu=...`, mémorisation via `saveVariable` — a depuis été entièrement remplacé, voir piège n°11.)*
+
+Conséquence pratique du split en deux périphériques maîtres : comme pour tout changement de `devices`/`parameters` (piège n°3), il faut supprimer et recréer tous les périphériques du plugin après cette mise à jour.
+
+`getPeriphList()`/`getValue()` ne figuraient pas dans la liste de fonctions confirmées du piège n°5 (établie avant ce changement) — **confirmé fonctionnel sur une box réelle** (voir historique de session : `getPeriphList()` est indexé par `device_id`, avec un champ `full_name` — PAS `name`/`periph_id` comme le laissait supposer la doc HTTP API `periph.list` — et `getValue($device_id)` renvoie bien un champ `value`).
+
+## Piège n°11 — ECU_ID combiné dans VAR3 (`SID|ECU_ID`), plus d'activation manuelle
+
+L'activation manuelle de l'ECU_ID (piège n°9, appel URL avec `&ecu=...`) fonctionnait mais restait une étape UX peu naturelle. Remplacée par une astuce plus simple : l'utilisateur saisit directement `SID|ECU_ID` (au lieu de juste `SID`) dans le champ `SID` du formulaire — `ECU_ID` restant facultatif (juste `SID` fonctionne toujours). Le script fait `explode('|', $p3)` pour séparer les deux.
+
+**Pourquoi ça ne retombe PAS dans le piège n°6** (qui interdit de concaténer plusieurs tags `plugin.parameters.X` dans un seul VAR) : ici il n'y a toujours qu'**un seul tag** `plugin.parameters.SID` à substituer dans `VAR3` — eedomus fait une substitution simple et fiable, exactement comme pour `APP_ID`/`APP_SECRET`/`SID` individuellement. La valeur combinée `SID|ECU_ID` est composée par l'UTILISATEUR en tapant dans le champ, pas par le moteur de templating d'eedomus qui essaierait de fusionner deux tags — c'est cette dernière opération (côté eedomus) qui était non fiable, pas le fait qu'un VAR porte une chaîne composite.
+
+Conséquences :
+- Suppression du paramètre `ECU_ID` du manifeste (n'existe plus, plus de champ dédié).
+- Suppression de tout le mécanisme `saveVariable`/`loadVariable` pour l'ECU_ID dans `aps_solar.php` (plus besoin : transmis à chaque requête comme APP_ID/APP_SECRET/SID).
+- Suppression de la section "Activer la puissance instantanée" du README (plus d'étape manuelle).
+- Comme pour tout changement de `parameters` (piège n°3), nécessite de supprimer/recréer les périphériques après mise à jour.
 
 ## État actuel du projet (dernière version fonctionnelle testée)
 
 - Manifeste corrigé avec `"scripts"` (pluriel, objets `{name:...}`) — **pas encore retesté après ce dernier fix** au moment de la rédaction de ce document.
 - Architecture canaux + XML partagé fonctionnelle (confirmé par les logs : `p1/p2/p3` bien renseignés, seul le "Script introuvable" bloquait).
-- ECU_ID à activer manuellement une fois via l'URL documentée dans le README.
+- ECU_ID à activer manuellement une fois via l'URL documentée dans le README (désormais indexée par SID, plus par `eedomus_controller_module_id` — voir Piège n°9).
+- Coupure de nuit + split `POLLING`/`POLLING_POWER` (Piège n°9) ajoutés mais **pas encore testés sur une box réelle** — priorité du prochain test.
 
 ## Prochaine étape suggérée
 
-Une fois le fix "scripts" (pluriel) validé par un test réel sur la box, envisager de packager tout ça proprement (repo git, versionnement du zip) pour faciliter les futures itérations sans dépendre uniquement du chat.
+Tester sur une box réelle : la coupure de nuit (`sdk_is_night()` trouve bien le périphérique "Soleil Extérieur" et lit sa valeur), le split `today`/`power` en deux périphériques indépendants avec leurs propres intervalles, et la ré-activation de l'ECU_ID via la nouvelle URL (sans `eedomus_controller_module_id`). Une fois validé, envisager de packager tout ça proprement (repo git, versionnement du zip) pour faciliter les futures itérations sans dépendre uniquement du chat.
