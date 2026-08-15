@@ -14,6 +14,10 @@ Full installation and configuration instructions:
 - `img/apsolar.png` — plugin icon
 - `SESSION_NOTES.md` — pitfalls and design notes from developing this plugin against the eedomus SDK
 
+## Design notes
+
+The APsystems API base URL is hardcoded in `aps_solar.php` rather than exposed as a plugin parameter: eedomus HTTP sensors only substitute 3 variable slots (`VAR1`-`VAR3`) into `RAW_URL`, already spent on `APP_ID`/`APP_SECRET`/`SID` — too rare a need to justify a 4th. See `SESSION_NOTES.md` for this and other eedomus SDK constraints that shaped the plugin's design.
+
 ## Building
 
 The plugin is distributed to the eedomus Store as a single zip (`aps_eedomus_plugin.zip`) with all files at its root. `dist/` is not committed; build it locally with:

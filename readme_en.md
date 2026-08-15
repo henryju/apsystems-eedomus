@@ -36,8 +36,6 @@ This plugin pulls solar production data from your APsystems EMA account (via the
 - **`POLLING`**: Polling interval for today/month/year/lifetime, in minutes, max 1000 (default 180 = 3h)
 - **`POLLING_POWER`**: Polling interval for instantaneous power, in minutes, max 1000 (default 30)
 
-The API base URL (`https://api.apsystemsema.com:9282`) is now hardcoded in the script; it's no longer a form parameter (too rare a need to justify spending one of the 3 available variable slots, see the technical section below).
-
 If you don't enter an ECU_ID, everything else works normally, but the "Instantaneous power" channel stays at -1 (unavailable).
 
 ## Discovery script (aps_discover.php)

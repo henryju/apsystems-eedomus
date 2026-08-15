@@ -36,8 +36,6 @@ Ce plugin récupère la production de vos panneaux solaires APsystems (via l'EMA
 - **`POLLING`** : Intervalle d'interrogation du résumé (aujourd'hui/mois/année/vie), en minutes, max 1000 (par défaut 180 = 3h)
 - **`POLLING_POWER`** : Intervalle d'interrogation de la puissance instantanée, en minutes, max 1000 (par défaut 30)
 
-L'URL de base de l'API (`https://api.apsystemsema.com:9282`) est fixée directement dans le script ; ce n'est plus un paramètre du formulaire (cas d'usage trop rare pour justifier de consommer l'un des 3 emplacements de variable disponibles, voir la section technique plus bas).
-
 Si vous ne renseignez pas d'ECU_ID, tout fonctionne normalement mais le canal "Puissance instantanée" reste à -1 (valeur non disponible).
 
 ## Script de découverte (aps_discover.php)
