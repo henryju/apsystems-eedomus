@@ -6,7 +6,7 @@
   "version": "1.0",
   "creation_date": "2026-07-04",
   "modification_date": "2026-07-04",
-  "author": "Custom",
+  "author": "<a href='https://github.com/henryju/apsystems-eedomus' target='_blank'>henryju</a>",
   "description_fr": "Récupère la production de vos panneaux solaires APsystems (EMA OpenAPI) : aujourd'hui, mois, année, vie, et puissance instantanée.",
   "description_en": "Retrieves your APsystems solar production (EMA OpenAPI): today, month, year, lifetime, and instantaneous power.",
   "parameters": [
