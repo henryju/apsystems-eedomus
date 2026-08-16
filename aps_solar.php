@@ -99,7 +99,7 @@ function sdk_is_night() {
     $sun_var_name = 'APS_SUN_PERIPH_ID';
 
     $sun_periph_id = loadVariable($sun_var_name);
-    if ($sun_periph_id === false) {
+    if ($sun_periph_id == false) {
         $sun_periph_id = '';
     }
 
@@ -150,19 +150,19 @@ $year_value     = loadVariable($year_cache_name);
 $lifetime_value = loadVariable($lifetime_cache_name);
 $power_value    = loadVariable($power_cache_name);
 
-if ($today_value === false) {
+if ($today_value == false) {
     $today_value = -1;
 }
-if ($month_value === false) {
+if ($month_value == false) {
     $month_value = -1;
 }
-if ($year_value === false) {
+if ($year_value == false) {
     $year_value = -1;
 }
-if ($lifetime_value === false) {
+if ($lifetime_value == false) {
     $lifetime_value = -1;
 }
-if ($power_value === false) {
+if ($power_value == false) {
     $power_value = -1;
 }
 

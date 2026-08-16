@@ -165,13 +165,26 @@ Conséquences :
 - Suppression de la section "Activer la puissance instantanée" du README (plus d'étape manuelle).
 - Comme pour tout changement de `parameters` (piège n°3), nécessite de supprimer/recréer les périphériques après mise à jour.
 
-## État actuel du projet (dernière version fonctionnelle testée)
+Confirmé sur box réelle (log `http_sensor`) : `p3=SID|ECU_ID` arrive bien intact et non tronqué dans l'URL (le `|` n'est pas encodé mais eedomus/PHP le transmettent tel quel sans souci).
 
-- Manifeste corrigé avec `"scripts"` (pluriel, objets `{name:...}`) — **pas encore retesté après ce dernier fix** au moment de la rédaction de ce document.
-- Architecture canaux + XML partagé fonctionnelle (confirmé par les logs : `p1/p2/p3` bien renseignés, seul le "Script introuvable" bloquait).
-- ECU_ID à activer manuellement une fois via l'URL documentée dans le README (désormais indexée par SID, plus par `eedomus_controller_module_id` — voir Piège n°9).
-- Coupure de nuit + split `POLLING`/`POLLING_POWER` (Piège n°9) ajoutés mais **pas encore testés sur une box réelle** — priorité du prochain test.
+## Piège n°12 — `loadVariable()` sur une variable jamais sauvegardée : ne pas tester `=== false`
+
+Constat (log réel, device "power", quota API déjà dépassé donc l'appel échoue) : eedomus loggait `Valeur lue vide []` pour `//power`, alors que le code prévoyait un fallback `-1` en cas d'échec. Cause probable : `$power_value = loadVariable($power_cache_name); if ($power_value === false) { $power_value = -1; }` — la comparaison **stricte** suppose que `loadVariable()` renvoie exactement le booléen `false` quand la variable n'a jamais été sauvegardée. Si en pratique elle renvoie autre chose (`''`, `NULL`...) dans ce cas précis, le fallback ne se déclenche jamais et une chaîne vide se retrouve dans le XML (`<power></power>`), qu'eedomus lit comme "valeur vide" plutôt que comme un nombre.
+
+Le bug était invisible pour `today`/`month`/`year`/`lifetime` car leur maître (`today`, toujours en mode `summary`) écrase explicitement la valeur par un code d'erreur négatif en cas d'échec API (`$error_code = 0 - $summary_json['code']`), donc le résultat de `loadVariable()` n'est jamais exposé tel quel dans ce cas. `power` n'a pas cette branche `else` et le quota déjà dépassé a exposé le problème.
+
+**Fix** : remplacer `===` par `==` (comparaison large) dans tous les checks de fallback de cache. `false == ''` et `false == NULL` sont vrais en PHP, donc ça absorbe l'incertitude sur la valeur exacte renvoyée par `loadVariable()` pour une variable jamais définie, quelle qu'elle soit, sans risque : une vraie valeur de production/puissance n'est jamais `false`/`''`/`NULL`.
+
+## État actuel du projet
+
+- Plugin en production sur une box réelle depuis plusieurs jours (pas encore publié publiquement sur le Store, juste en mode Privé).
+- Manifeste `"scripts"` (pluriel), architecture canaux + XML partagé : confirmés fonctionnels.
+- Coupure de nuit (`sdk_is_night()`) : **confirmée fonctionnelle sur une box réelle** — trouve bien le périphérique "Soleil Extérieur" (`device_id` variable selon la box), lit sa `value`, et met en cache le `device_id` trouvé pour éviter de rescanner `getPeriphList()` à chaque appel.
+- Split `today`/`power` en deux périphériques maîtres indépendants avec `POLLING`/`POLLING_POWER` séparés : déployé.
+- ECU_ID combiné dans le champ `SID` (`SID|ECU_ID`, Piège n°11) : implémenté, cohérent avec le fonctionnement déjà confirmé des autres VAR à tag unique, mais **pas encore explicitement revérifié sur une box réelle** avec un vrai ECU_ID (contrairement à la coupure de nuit, qui l'a été via des scripts de debug dédiés).
+- `aps_discover.php` retiré du zip distribué (conservé dans le repo pour référence).
+- Repo publié sur GitHub (`henryju/apsystems-eedomus`, public), avec LICENSE (GPL-3.0), CI de build, et doc utilisateur (`readme_fr.md`/`readme_en.md`) affichée dans l'aide en ligne d'eedomus.
 
 ## Prochaine étape suggérée
 
-Tester sur une box réelle : la coupure de nuit (`sdk_is_night()` trouve bien le périphérique "Soleil Extérieur" et lit sa valeur), le split `today`/`power` en deux périphériques indépendants avec leurs propres intervalles, et la ré-activation de l'ECU_ID via la nouvelle URL (sans `eedomus_controller_module_id`). Une fois validé, envisager de packager tout ça proprement (repo git, versionnement du zip) pour faciliter les futures itérations sans dépendre uniquement du chat.
+Confirmer sur une box réelle que `SID|ECU_ID` fonctionne bien de bout en bout (le champ `power` remonte une vraie valeur, pas -1). Suivre la consommation réelle du quota API sur un mois complet avec les nouveaux défauts (`POLLING=180`, `POLLING_POWER=30`, coupure de nuit) pour vérifier qu'elle correspond à l'estimation documentée dans les readmes (~840 appels/mois).
